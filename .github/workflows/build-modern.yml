@@ -49,6 +49,11 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Detect Conan build profile
         run: conan profile detect --force
+      - name: Cache Conan dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan2.31-server-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py') }}
       - name: Configure
         run: python3 tools/yt.py configure server
       - name: Build
