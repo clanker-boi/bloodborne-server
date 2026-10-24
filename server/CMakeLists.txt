@@ -22,7 +22,7 @@ endif()
 find_package(Qt6 REQUIRED COMPONENTS Core Network Sql Concurrent HttpServer)
 
 if(YT_USE_CONAN)
-    find_package(Protobuf CONFIG REQUIRED)
+    find_package(protobuf CONFIG REQUIRED)
     set(YT_PROTOBUF_LIB protobuf::libprotobuf)
     set(YT_PROTOC protobuf::protoc)
 else()
