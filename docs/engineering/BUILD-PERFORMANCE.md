@@ -250,7 +250,7 @@ Run on both architectures with the *same* Conan lock/package store.
 5. **E4 PCH:** selected targets only with compiler cache on/off.
 6. **E5 unity:** selected large targets, batch 4 and 8, separately
    measure cold speed and incremental one-file edit + source breakages.
-7. **E6 release LTO:** no LTO, ThinLTO+l ld cache, and full LTO; measure
+7. **E6 release LTO:** no LTO, ThinLTO+LLD cache, and full LTO; measure
    compile+link+runtime smoke, then adopt fastest acceptable profile.
 8. **E7 build-graph invalidations:** touch one co-op source, server
    schema, graphic shader, and unchanged revision; inspect Ninja
