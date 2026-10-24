@@ -320,3 +320,15 @@ add_custom_command(TARGET shadnet POST_BUILD
 
 install(TARGETS shadnet RUNTIME DESTINATION bin)
 install(FILES worlds.cfg scoreboards.cfg DESTINATION bin)
+# Test binaries are deliberately excluded from the normal 'all' build. Expose
+# one aggregate target so the canonical test command can compile all of them
+# without enumerating source-specific test targets in a Python or shell script.
+if(BUILD_TESTING)
+    get_property(_yt_server_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    add_custom_target(yt-server-tests)
+    foreach(_yt_target IN LISTS _yt_server_targets)
+        if(_yt_target MATCHES "^test_")
+            add_dependencies(yt-server-tests ${_yt_target})
+        endif()
+    endforeach()
+endif()
