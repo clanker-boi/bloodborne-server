@@ -5,6 +5,8 @@ on:
     paths:
       - CMakeLists.txt
       - conanfile.py
+      - conan/profiles/**
+      - conan/locks/**
       - server/**
       - tools/yt.py
       - tools/tests/**
@@ -14,6 +16,8 @@ on:
     paths:
       - CMakeLists.txt
       - conanfile.py
+      - conan/profiles/**
+      - conan/locks/**
       - server/**
       - tools/yt.py
       - tools/tests/**
@@ -67,7 +71,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.conan2
-          key: conan2.33-minqt-v2-${{ matrix.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py') }}
+          key: conan2.33-minqt-v2-${{ matrix.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}
       - name: Prepare Conan dependencies (cache hit)
         if: steps.conan-cache.outputs.cache-hit == 'true'
         run: python3 tools/yt.py deps server --build-policy never

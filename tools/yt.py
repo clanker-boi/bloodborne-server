@@ -50,6 +50,13 @@ def deps(component: str, config: str, *, build_policy: str, offline: bool) -> No
     verify_tools(component, for_deps=True)
     dest = conan_dir(component, config)
     dest.mkdir(parents=True, exist_ok=True)
+    # Use checked-in compiler/ABI profiles when available. This avoids
+    # runner-image profile drift and makes cache identities reproducible.
+    machine = platform.machine().lower()
+    arch = "arm64" if machine in ("aarch64", "arm64") else "amd64"
+    profile = ROOT / "conan/profiles" / f"linux-{arch}"
+    lockfile = ROOT / "conan/locks" / f"server-linux-{arch}.lock"
+    pinned = platform.system() == "Linux" and component == "server" and profile.is_file()
     command = [
         "conan", "install", ".", "--output-folder", str(dest),
         "-s:h", f"build_type={config}", "-s:b", "build_type=Release",
@@ -57,6 +64,10 @@ def deps(component: str, config: str, *, build_policy: str, offline: bool) -> No
         "-o", f"&:with_native={str(component in ('native', 'all'))}",
         f"--build={build_policy}",
     ]
+    if pinned:
+        command.extend(("-pr:h", str(profile), "-pr:b", str(profile)))
+        if lockfile.is_file():
+            command.extend(("--lockfile", str(lockfile)))
     if offline:
         command.append("--offline")
     run(*command)
