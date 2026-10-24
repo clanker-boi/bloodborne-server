@@ -75,6 +75,13 @@ jobs:
           key: conan2.33-minqt-v2-${{ matrix.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}
       # A package snapshot in GHCR survives short-lived Actions cache eviction.
       # Read-only pull; if unavailable, the normal Conan source fallback remains.
+      - name: Authenticate to GHCR for read-only package restore
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Restore binary package snapshot from GHCR on Actions cache miss
         id: ghcr
         if: steps.conan-cache.outputs.cache-hit != 'true'
@@ -123,12 +130,19 @@ jobs:
         run: python3 tools/smoke_server.py --stage out/yt/server/release/stage
       - name: Smoke test packaged non-root Docker image
         run: python3 tools/smoke_container.py --stage out/yt/server/release/stage
-      - name: Publish headless server staging artifact
+      - name: Pack standalone server preserving modes and symlinks
+        run: |
+          tar -C out/yt/server/release/stage -czf "out/yt/server/release/shadnet-linux-${{ matrix.arch }}.tar.gz" .
+          cd out/yt/server/release
+          sha256sum "shadnet-linux-${{ matrix.arch }}.tar.gz" > "shadnet-linux-${{ matrix.arch }}.sha256"
+      - name: Upload checksum-verified standalone server artifact
         uses: actions/upload-artifact@v4
         with:
           name: shadnet-headless-${{ matrix.arch }}
-          path: out/yt/server/release/stage
-          retention-days: 7
+          path: |
+            out/yt/server/release/shadnet-linux-${{ matrix.arch }}.tar.gz
+            out/yt/server/release/shadnet-linux-${{ matrix.arch }}.sha256
+          retention-days: 14
           if-no-files-found: error
       - name: sccache compilation statistics
         if: always()

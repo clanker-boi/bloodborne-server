@@ -68,3 +68,32 @@ cache mounts keyed to actual toolchain/dependency inputs.
 
 **Tradeoff:** Actual arm64 build latency can be higher under emulation;
 prefer native runners for routine ARM64 CI.
+
+## ADR-007 — Package the tested binary instead of compiling in Docker
+**Date:** 2026-10-24. **Status:** Accepted and validated on Linux AMD64/ARM64.
+
+**Decision:** Native GitHub Actions runners build, link and test shadnet
+from root CMake/Conan. A packaging script stages its Conan dynamic
+libraries and required Qt SQLite plugin. Docker only packages that
+tested binary. The non-root runtime uses UID 10001, a dedicated state
+volume and an HTTP healthcheck. The image contains no game data.
+Standalone archives preserve UNIX file modes and symlinks.
+
+**Tradeoff:** The distro/glibc ABI of the packaging runner must remain
+compatible with the Ubuntu 24.04 runtime base. The Qt plugin/SONAME
+discovery script requires smoke testing on both architectures.
+
+## ADR-008 — GHCR binary-snapshot fallback and trusted image publication
+**Date:** 2026-10-24. **Status:** Implementation staged; clean-cache restore pending.
+
+**Decision:** GHCR stores architecture-specific Conan *binary package*
+snapshots in OCI data images keyed by Conan recipe/profile/lock hash.
+PR CI uses temporary Actions caches first, read-only GHCR snapshots
+second, then an explicit Conan source build as cold recovery. Only a
+trusted direct branch push may publish images, and both architectures
+must pass before assembling the multiarch manifest.
+
+**Tradeoff:** The snapshot is tied to a compiler ABI and runner OS,
+so the profiles must be pinned. Conan recipe revisions are locked,
+but byte-for-byte compiler-image provenance is not yet guaranteed.
+Package visibility and authentication must be managed through GHCR.

@@ -74,6 +74,19 @@ jobs:
           python3 tools/package_server.py
           python3 tools/smoke_server.py --stage out/yt/server/release/stage
           python3 tools/smoke_container.py --stage out/yt/server/release/stage
+      - name: Archive verified standalone release candidate
+        run: |
+          tar -C out/yt/server/release/stage -czf "out/yt/server/release/shadnet-linux-${{ matrix.arch }}.tar.gz" .
+          cd out/yt/server/release
+          sha256sum "shadnet-linux-${{ matrix.arch }}.tar.gz" > "shadnet-linux-${{ matrix.arch }}.sha256"
+      - name: Upload standalone server with checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: headless-linux-${{ matrix.arch }}
+          path: |
+            out/yt/server/release/shadnet-linux-${{ matrix.arch }}.tar.gz
+            out/yt/server/release/shadnet-linux-${{ matrix.arch }}.sha256
+          retention-days: 14
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -99,6 +112,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.repository == 'clanker-boi/bloodborne-server'
     steps:
+      - uses: actions/checkout@v4
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:

@@ -6,9 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv pipx cmake ninja-build clang \
     git ca-certificates pkg-config build-essential && rm -rf /var/lib/apt/lists/*
 ENV PATH="/root/.local/bin:$PATH"
-RUN pipx install 'conan>=2.31,<3' && conan profile detect --force
+RUN pipx install conan==2.33.0 && conan profile detect --force
 WORKDIR /src
 COPY CMakeLists.txt conanfile.py ./
+COPY conan/ conan/
 COPY tools/yt.py tools/yt.py
 COPY server/ server/
 COPY backend/ backend/

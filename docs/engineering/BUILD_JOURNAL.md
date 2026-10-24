@@ -254,3 +254,43 @@ flakiness source has been eliminated.
 **Follow-up:** If this test ever fails again, retain and surface
 shadnet diagnostic logs before teardown; investigate cross-process
 port allocation and Qt backend binding separately from CI caching.
+
+## 2026-10-24 — pinned Conan graph and headless deployment verification
+
+**Resolved dependency lock**: GitHub Actions
+https://github.com/clanker-boi/bloodborne-server/actions/runs/40142122685
+successfully produced matching AMD64/ARM64 lockfile graphs (19 runtime and
+14 build-time recipe revisions). The common recipe-revision lock is now
+tracked at `conan/locks/server-linux.lock` with GCC13 Conan host/build
+profiles at `conan/profiles/linux-{amd64,arm64}`.
+
+**Canonical CI:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40142312225
+completed successful server compilation and all CTests on **both** native
+Ubuntu architectures, then staged a headless runtime from the tested
+binary, validated direct startup/SQLite/HTTP/restart and built and
+smoke-tested the non-root Docker image with the same mounted state.
+
+**Trusted publishing:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40142307045
+both native architecture publisher jobs succeeded, independently running
+server build, tests, package staging and Docker smoke. The server
+multiarch manifest **was successfully published**:
+
+```text
+ghcr.io/clanker-boi/yharnam-server:git-445a63b49cc4e3827a9e5cb4cc68c7c1c17c28a2
+sha256:bd08d820f1dc045c784210d9234c3dbd3149c439737da0ce5fd76ee7cd339d79
+```
+
+Per-arch Conan binary snapshots were also pushed under a lock-hash tag.
+The initial **Conan snapshot multiarch manifest step failed** because
+the final manifest job lacked `actions/checkout`, causing
+`hashFiles('conanfile.py', ...)` to resolve to the empty string.
+The runtime image manifest was already successfully published.
+The checkout fix is part of the follow-up commit and needs validation.
+The same follow-up adds SHA256-verified standalone tarballs preserving
+file modes and symlinks, license notices, and a clean-home GHCR binary
+recovery test.
+
+**Limitations:** Docker state smoke preserves a marker across process
+recreation and validates SQL initialization. It does **not** demonstrate
+a live joined co-op party or actual multiplayer world progression.
+Native Windows client/installer parity remains open.

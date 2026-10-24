@@ -11,6 +11,7 @@ without relying on previous chat history.
 | [DECISIONS.md](DECISIONS.md) | Decisions and their tradeoffs, including rejected approaches |
 | [BUILD_JOURNAL.md](BUILD_JOURNAL.md) | Dated, append-only build attempts, CI links and observed errors |
 | [BUILD-PERFORMANCE.md](BUILD-PERFORMANCE.md) | Measured timing baseline, Ninja, linker, caching, PCH/unity and benchmark plan |
+| [HEADLESS-SERVER.md](HEADLESS-SERVER.md) | Locked Conan profiles, GHCR snapshots, staging and Docker deployment |
 | [../../AGENTS.md](../../AGENTS.md) | Compact operating instructions for coding agents |
 | [../BUILD-MODERN.md](../BUILD-MODERN.md) | Current experimental CLI, Docker and CI commands |
 

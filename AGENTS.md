@@ -4,7 +4,8 @@
 [STATUS.md](docs/engineering/STATUS.md),
 [BUILD_ARCHITECTURE.md](docs/engineering/BUILD_ARCHITECTURE.md),
 [BUILD_JOURNAL.md](docs/engineering/BUILD_JOURNAL.md),
-[BUILD-PERFORMANCE.md](docs/engineering/BUILD-PERFORMANCE.md), and
+[BUILD-PERFORMANCE.md](docs/engineering/BUILD-PERFORMANCE.md),
+[HEADLESS-SERVER.md](docs/engineering/HEADLESS-SERVER.md), and
 [DECISIONS.md](docs/engineering/DECISIONS.md).
 
 This file is intentionally short. All substantive context and test evidence

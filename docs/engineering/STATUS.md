@@ -25,14 +25,14 @@ Neither server nor native client is yet certified against the new build.
 ## Required acceptance gates
 
 ### Gate S: Linux standalone server
-- [ ] Clean Conan resolution without local packages or unpinned side effects
+- [x] Pinned Linux GCC13 host/build profiles and Conan recipe revisions; both native arch builds passed [CI #40142312225](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142312225)
 - [x] Linux AMD64 server compiles and links from root build — CI #40135063503
 - [x] Linux ARM64 server compiles and links from root build — CI #40135063503
 - [x] Server CTest suite passes in both architectures — 16/16 each in CI #40135063503
-- [ ] Headless process boots, binds expected ports and serves `/status`
+- [x] Direct headless startup, /status, SQLite and restart smoke passed on AMD64/ARM64 in [CI #40142312225](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142312225)
 - [ ] Server loads/saves a team world, and can restart with persistent data
-- [ ] Dedicated Docker runtime image works with non-root UID + mounted state
-- [ ] Deployment docs, health checks and image labels validated
+- [x] Non-root Docker runtime and mounted-state restart smoke passed on both architectures in CI #40142312225
+- [x] Deployment template, health checks and OCI source labels exercised; [HEADLESS-SERVER.md](HEADLESS-SERVER.md) describes caveats
 
 ### Gate N: native client
 - [ ] Windows x86_64 Conan graph including MSYS2/Clang ABI settled
@@ -42,7 +42,7 @@ Neither server nor native client is yet certified against the new build.
 - [ ] Co-op integration and game startup regression tested on actual hardware
 
 ### Gate R: packaging and cutover
-- [ ] Reproducible lockfile/versioned dependency profiles
+- [x] Conan recipe lockfile and Linux x86_64/armv8 GCC13 profiles committed; binary package revisions may vary by build and full OS bit-reproducibility remains out of scope
 - [x] GitHub Actions early Conan cache save and **warm binary restore** verified on AMD64 + ARM64 (cold #40137604748, warm #40139233770)
 - [ ] Windows player installer/release artifacts match old feature set
 - [ ] SHA-256, SBOM/license notices and artifact provenance available
@@ -80,6 +80,16 @@ Commit `4b100db` changes the test to allocate four distinct simultaneously reser
 6. `docker/build/Dockerfile` is a builder prototype, not a polished
    minimal headless runtime image; multi-arch needs actual separate-arch
    compilation tests.
+
+## Headless release proof (2026-10-24)
+
+- [x] Exact Conan lockfile generated from real native AMD64 and ARM64 jobs ([run #40142122685](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142122685)); both produced identical recipe-revision graphs.
+- [x] Packed, tested headless server on both AMD64 and ARM64 ([run #40142312225](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142312225)).
+- [x] Trusted publishing jobs for both architectures passed ([run #40142307045](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142307045)).
+- [x] Multiarch **server** manifest published at `ghcr.io/clanker-boi/yharnam-server:git-445a63b49cc4e3827a9e5cb4cc68c7c1c17c28a2` with digest `sha256:bd08d820f1dc045c784210d9234c3dbd3149c439737da0ce5fd76ee7cd339d79`.
+- [ ] Multiarch **Conan cache** manifest retry pending; initial release job failed because its manifest job omitted checkout, giving an empty `hashFiles` expression. The manifest job is fixed in the subsequent commit.
+- [ ] Independent **clean Conan home** GHCR restore test is pending from `.github/workflows/verify-deps-image.yml`. Local Actions cache hits are already proven.
+- [ ] Team-world persistence from real gameplay and native Windows client compatibility remain untested. Docker smoke verifies filesystem state retention, not gameplay.
 
 ## Immediate next actions
 

@@ -7,7 +7,7 @@ together through lamp trips, deaths, boss fights and chalice dungeons.
 
 **Website, download and guides: <https://bloodborne.seamlesscoop.dev>**
 
-> **Fork build-system migration (draft):** [Engineering handoff](docs/engineering/README.md) · [Current status](docs/engineering/STATUS.md) · [Build journal](docs/engineering/BUILD_JOURNAL.md). These describe experimental build work; use released installers for playing.
+> **Fork build-system migration (draft):** [Engineering handoff](docs/engineering/README.md) · [Current status](docs/engineering/STATUS.md) · [Build journal](docs/engineering/BUILD_JOURNAL.md) · [Headless server deployment](docs/engineering/HEADLESS-SERVER.md). These describe experimental build work; use released installers for playing.
 
 
 **New here? Follow the [easy setup guide](https://bloodborne.seamlesscoop.dev/docs/install).**

@@ -6,6 +6,8 @@ The runtime uses Ubuntu 24.04 matching the runner's glibc and compiler ABI.
 """
 from __future__ import annotations
 import argparse
+import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -109,6 +111,40 @@ def package(binary: Path, dest: Path, *, conan_home: Path) -> None:
             alias.symlink_to(name)
     if not selected:
         raise RuntimeError("No Conan shared libraries detected; refuse to package incomplete runtime")
+
+    # Ship the applicable third-party license notices alongside redistributed
+    # shared libraries and the root GPL license. Conan recipe sources are not
+    # needed in the runtime image, but license files remain required.
+    notices = root / "licenses"
+    notices.mkdir(exist_ok=True)
+    project_license = ROOT / "LICENSE"
+    if project_license.is_file():
+        shutil.copy2(project_license, notices / "PROJECT-LICENSE")
+    packages = set()
+    for lib in selected:
+        for ancestor in lib.parents:
+            if not str(ancestor).startswith(conan_prefix):
+                break
+            if (ancestor / "licenses").is_dir():
+                packages.add(ancestor)
+                break
+    for package_root in sorted(packages):
+        destination = notices / package_root.parent.name
+        shutil.copytree(package_root / "licenses", destination, dirs_exist_ok=True)
+
+    # A straightforward manifest makes distributed artifacts auditable. OCI
+    # digests protect the container itself; this records its bundled files.
+    entries = {}
+    for item in sorted(root.rglob("*")):
+        relative = item.relative_to(root).as_posix()
+        if item.is_symlink():
+            entries[relative] = {"symlink": os.readlink(item)}
+        elif item.is_file():
+            entries[relative] = {"sha256": hashlib.sha256(item.read_bytes()).hexdigest()}
+    (root / "manifest.json").write_text(
+        json.dumps({"format": 1, "files": entries}, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(f"Staged {binary.name}, Qt SQLite plugin and {len(selected)} Conan shared libraries at {dest}")
 
 
