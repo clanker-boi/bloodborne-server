@@ -5,7 +5,7 @@ Last updated: **2026-10-24**. See the append-only
 
 ## At-a-glance
 
-**State: CI attempted; first AMD64 run failed at Conan protobuf CMake name, now fixed but rerun pending.** Work is isolated in
+**State: Linux AMD64 and ARM64 server compiled and all 16 tests passed on the corrected CI run; other acceptance gates remain open.** Work is isolated in
 [draft PR #1](https://github.com/clanker-boi/bloodborne-server/pull/1).
 Neither server nor native client is yet certified against the new build.
 
@@ -23,9 +23,9 @@ Neither server nor native client is yet certified against the new build.
 
 ### Gate S: Linux standalone server
 - [ ] Clean Conan resolution without local packages or unpinned side effects
-- [ ] Linux AMD64 server compiles and links from root build
-- [ ] Linux ARM64 server compiles and links from root build
-- [ ] Server CTest suite passes in both architectures
+- [x] Linux AMD64 server compiles and links from root build — CI #40135063503
+- [x] Linux ARM64 server compiles and links from root build — CI #40135063503
+- [x] Server CTest suite passes in both architectures — 16/16 each in CI #40135063503
 - [ ] Headless process boots, binds expected ports and serves `/status`
 - [ ] Server loads/saves a team world, and can restart with persistent data
 - [ ] Dedicated Docker runtime image works with non-root UID + mounted state
@@ -48,7 +48,7 @@ Neither server nor native client is yet certified against the new build.
 
 ## Known blockers and risks
 
-1. **First real AMD64 CI run failed** at `find_package(Protobuf)` after a successful Qt dependency build; lowercase `find_package(protobuf)` is committed. Next green run is not yet verified. Details and job links are in the build journal. Until green, do not merge.
+1. **Initial AMD64 CI failure fixed** (`find_package(protobuf)`); both architectures now pass compilation and the full 16-test suite at commit `7b834c9` in CI #40135063503. This does not verify a server runtime smoke test, Docker image, client, or release. Do not merge yet.
 2. Conan Qt6 HttpServer builds may be costly and may lack a matching binary
    package for the chosen option set. Dependencies need caching and lockfiles.
 3. The server currently uses a vendored Protobuf CMake subtree; the new
@@ -65,9 +65,7 @@ Neither server nor native client is yet certified against the new build.
 
 ## Immediate next actions
 
-1. Inspect completed AMD64/ARM64 CI run logs. Record exact errors and fix
-   Conan recipe, package options, generated toolchain handling and CMake
-   target wiring until server builds pass.
+1. Implement caching strategy and benchmark plan in [BUILD-PERFORMANCE.md](BUILD-PERFORMANCE.md); preserve clean full-source builds as audit jobs. Measure dependency source builds, compiler critical path and object-cache hit rate.
 2. Start shadnet in CI, poll WebAPI `/status`, and run an integration smoke
    test; ensure server doesn't depend on a game install.
 3. Finalize container build/runtime stages, non-root volume, health check.
