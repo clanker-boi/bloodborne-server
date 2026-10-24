@@ -88,6 +88,12 @@ def main() -> int:
             command += ["--parallel", str(args.jobs)]
         run(*command)
     else:
+        # Build test executables that server/CMakeLists excludes from the default all target.
+        if args.component in ("server", "all"):
+            test_build = ["cmake", "--build", str(path), "--target", "yt-server-tests"]
+            if args.jobs:
+                test_build += ["--parallel", str(args.jobs)]
+            run(*test_build)
         command = ["ctest", "--test-dir", str(path), "--output-on-failure", "-C", args.config]
         if args.jobs:
             command += ["--parallel", str(args.jobs)]
