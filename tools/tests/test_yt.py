@@ -41,6 +41,7 @@ class BuildCliTests(unittest.TestCase):
             generator.write_text("unused in mocked configure")
             with patch.object(yt, "deps") as deps, \
                  patch.object(yt, "verify_tools"), \
+                 patch.object(yt.shutil, "which", return_value="/usr/bin/sccache"), \
                  patch.object(yt, "generated_toolchain", return_value=generator), \
                  patch.object(yt, "run") as run:
                 yt.configure("server", "Release", reuse_deps=True,
