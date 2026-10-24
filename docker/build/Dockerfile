@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Architecture-native server builder. BuildKit cache survives rebuilds.
-FROM --platform=$BUILDPLATFORM ubuntu:24.04 AS build
-ARG TARGETARCH
-ARG BUILDPLATFORM
+FROM ubuntu:24.04 AS build
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv pipx cmake ninja-build clang \
@@ -10,7 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/root/.local/bin:$PATH"
 RUN pipx install 'conan>=2.31,<3' && conan profile detect --force
 WORKDIR /src
-COPY . .
+COPY CMakeLists.txt conanfile.py ./
+COPY tools/yt.py tools/yt.py
+COPY server/ server/
+COPY backend/ backend/
 # Native cross-architecture builds are achieved using buildx emulation or native runners.
 # Cross-compiler setups should use explicit Conan build/host profiles instead.
 RUN --mount=type=cache,target=/root/.conan2/p \
