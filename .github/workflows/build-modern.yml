@@ -7,6 +7,7 @@ on:
       - conanfile.py
       - server/**
       - tools/yt.py
+      - tools/tests/**
       - docker/build/**
       - .github/workflows/build-modern.yml
   pull_request:
@@ -15,12 +16,20 @@ on:
       - conanfile.py
       - server/**
       - tools/yt.py
+      - tools/tests/**
       - docker/build/**
       - .github/workflows/build-modern.yml
   workflow_dispatch:
+    inputs:
+      linker:
+        description: "ELF linker for server CI"
+        type: choice
+        options: [default, mold, lld]
+        default: mold
 
-# Limit branch/PR duplicate noise during build migration. Group by the actual
-# source branch for push and PR events, so every new commit supersedes an old job.
+permissions:
+  contents: read
+
 concurrency:
   group: modern-build-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
@@ -37,6 +46,8 @@ jobs:
           - os: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.os }}
+    env:
+      SCCACHE_GHA_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,19 +55,47 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build clang pipx python3
-          pipx install 'conan>=2.31,<3'
+          sudo apt-get install -y --no-install-recommends cmake ninja-build clang lld mold pipx python3
+          pipx install conan==2.33.0
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Detect Conan build profile
         run: conan profile detect --force
-      - name: Cache Conan dependencies
-        uses: actions/cache@v4
+      - name: Unit test canonical build CLI
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Restore Conan binary packages
+        id: conan-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.conan2
-          key: conan2.31-server-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py') }}
-      - name: Configure
-        run: python3 tools/yt.py configure server
+          key: conan2.33-minqt-v2-${{ matrix.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py') }}
+      - name: Prepare Conan dependencies (cache hit)
+        if: steps.conan-cache.outputs.cache-hit == 'true'
+        run: python3 tools/yt.py deps server --build-policy never
+      - name: Prepare Conan dependencies (cache miss)
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        run: |
+          python3 tools/yt.py deps server --build-policy missing
+          python3 tools/yt.py prune-conan
+      # Save before app configure/build/tests. A later application failure cannot
+      # discard successful Qt/Protobuf compilation on a fresh runner.
+      - name: Save Conan binary cache before application build
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.conan2
+          key: ${{ steps.conan-cache.outputs.cache-primary-key }}
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Configure with memory-aware Ninja pools and mold
+        run: |
+          python3 tools/yt.py configure server --reuse-deps \
+            --sccache --linker "${{ inputs.linker || 'mold' }}" \
+            --compile-jobs 4 --link-jobs 1
       - name: Build
-        run: python3 tools/yt.py build server --jobs 4
+        run: python3 tools/yt.py build server --jobs 4 --ninja-stats
       - name: Test
-        run: python3 tools/yt.py test server --jobs 4
+        run: python3 tools/yt.py test server --jobs 4 --ninja-stats
+      - name: sccache compilation statistics
+        if: always()
+        run: |
+          if command -v sccache >/dev/null; then sccache --show-stats; fi
