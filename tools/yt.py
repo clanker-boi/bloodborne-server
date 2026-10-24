@@ -55,7 +55,7 @@ def deps(component: str, config: str, *, build_policy: str, offline: bool) -> No
     machine = platform.machine().lower()
     arch = "arm64" if machine in ("aarch64", "arm64") else "amd64"
     profile = ROOT / "conan/profiles" / f"linux-{arch}"
-    lockfile = ROOT / "conan/locks" / f"server-linux-{arch}.lock"
+    lockfile = ROOT / "conan/locks" / "server-linux.lock"
     pinned = platform.system() == "Linux" and component == "server" and profile.is_file()
     command = [
         "conan", "install", ".", "--output-folder", str(dest),
