@@ -1,7 +1,7 @@
 name: Modern build (server)
 on:
   push:
-    branches: [build/modern-toolchain-conan-docker]
+    branches: [main]
     paths:
       - CMakeLists.txt
       - conanfile.py
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
       - name: Install tools
         run: |
           sudo apt-get update
