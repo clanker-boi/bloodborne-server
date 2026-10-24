@@ -83,3 +83,37 @@ has not been proven to hit yet.
 ARM64 companion run remained under Conan configuration at last check.
 Next: inspect a CI run on commit with the lowercase find_package fix,
 fix any further target/config errors, compile/link/test shadnet.
+
+## 2026-10-24 — corrected real Linux AMD64 and ARM64 builds PASSED
+
+**Run:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40135063503
+(checked-out commit `7b834c9`, Ubuntu 24.04 standard public runners,
+4 vCPU and 16 GiB RAM per architecture). Both jobs completed **success**.
+Commands from the single `tools/yt.py` interface:
+```sh
+python3 tools/yt.py configure server
+python3 tools/yt.py build server --jobs 4
+python3 tools/yt.py test server --jobs 4
+```
+**Results:** AMD64 and ARM64 compiled and linked `shadnet`, compiled
+excluded unit-test executables, and passed **16/16 CTest** each.
+Tests ran in **2.61s** and **2.68s** respectively; the workflow `Test`
+step (~53s and ~51s) was mainly test executable compilation.
+
+| CI step | AMD64 | ARM64 |
+| --- | ---: | ---: |
+| Conan + CMake configure | 6m25s | 16m44s |
+| Build server | 54s | 51s |
+| Test build + CTest | 53s | 51s |
+| Full job | **9m21s** | **19m19s** |
+
+**Findings:** cold Conan Qt HttpServer dependencies dominate elapsed time.
+There is now proof of a successful server build/test on both architectures,
+but **no runtime headless-server smoke-test proof**, persistent-world restart,
+Docker runtime image, native Windows/client build, or release-package parity.
+No reason yet to spend extensive time optimizing CTest scheduling.
+
+**Follow-up:** see [BUILD-PERFORMANCE.md](BUILD-PERFORMANCE.md) for
+Ninja job pools, mold/LLD, sccache, PCH, unity and ThinLTO experiments.
+Prioritize pinned precompiled Conan binary packages; don't repeatedly
+compile Qt on normal PRs. Do not declare the build-system migration done.
