@@ -20,7 +20,7 @@ jobs:
             arch: amd64
           - runner: ubuntu-24.04-arm
             arch: arm64
-    runs-on: \${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - name: Install fixed Conan version
@@ -31,16 +31,16 @@ jobs:
         run: |
           mkdir -p out/conan-locks
           conan lock create . --lockfile="" \
-            --lockfile-out="out/conan-locks/server-linux-\${{ matrix.arch }}.lock" \
-            -pr:h="conan/profiles/linux-\${{ matrix.arch }}" \
-            -pr:b="conan/profiles/linux-\${{ matrix.arch }}" \
+            --lockfile-out="out/conan-locks/server-linux-${{ matrix.arch }}.lock" \
+            -pr:h="conan/profiles/linux-${{ matrix.arch }}" \
+            -pr:b="conan/profiles/linux-${{ matrix.arch }}" \
             -s:h build_type=Release -s:b build_type=Release \
             -o '&:with_server=True' -o '&:with_native=False'
       - name: Print resolved lock for verified source-control handoff
         run: |
-          python3 -c 'import json,pathlib; p=pathlib.Path("out/conan-locks/server-linux-\${{ matrix.arch }}.lock"); print("YT_LOCK_DATA="+json.dumps(json.loads(p.read_text()),separators=(",",":")))'
+          python3 -c 'import json,pathlib; p=pathlib.Path("out/conan-locks/server-linux-${{ matrix.arch }}.lock"); print("YT_LOCK_DATA="+json.dumps(json.loads(p.read_text()),separators=(",",":")))'
       - uses: actions/upload-artifact@v4
         with:
-          name: conan-lock-linux-\${{ matrix.arch }}
-          path: out/conan-locks/server-linux-\${{ matrix.arch }}.lock
+          name: conan-lock-linux-${{ matrix.arch }}
+          path: out/conan-locks/server-linux-${{ matrix.arch }}.lock
           retention-days: 7
