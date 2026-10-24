@@ -5,7 +5,7 @@ Last updated: **2026-10-24**. See the append-only
 
 ## At-a-glance
 
-**State: initial implementation, unvalidated.** Work is isolated in
+**State: CI attempted; first AMD64 run failed at Conan protobuf CMake name, now fixed but rerun pending.** Work is isolated in
 [draft PR #1](https://github.com/clanker-boi/bloodborne-server/pull/1).
 Neither server nor native client is yet certified against the new build.
 
@@ -48,8 +48,7 @@ Neither server nor native client is yet certified against the new build.
 
 ## Known blockers and risks
 
-1. **CI builds are running** on branch; results to be recorded below and
-   in the build journal. Until green, do not merge.
+1. **First real AMD64 CI run failed** at `find_package(Protobuf)` after a successful Qt dependency build; lowercase `find_package(protobuf)` is committed. Next green run is not yet verified. Details and job links are in the build journal. Until green, do not merge.
 2. Conan Qt6 HttpServer builds may be costly and may lack a matching binary
    package for the chosen option set. Dependencies need caching and lockfiles.
 3. The server currently uses a vendored Protobuf CMake subtree; the new
