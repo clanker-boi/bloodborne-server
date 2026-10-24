@@ -145,3 +145,39 @@ time until the jobs finish. The unoptimized baseline remains
 sccache stats and 16-test result on both arches. Fix failures and compare
 warm-cache run with baseline cold source compilation. Test warm cache
 explicitly; one cold run cannot prove the benefit.
+
+## 2026-10-24 — first optimized CI: AMD64 + ARM64 succeeded
+
+**Run:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748
+(checkout `9e89c86`, which includes the optimization implementation `6440248`
+and CLI test fix `497cd56`; previous run #40137298135 was canceled when
+documentation synchronized the PR).
+
+**Both jobs completed successfully.** On Linux AMD64 and native ARM64:
+- `python3 -m unittest discover -s tools/tests -v` passed.
+- `python3 tools/yt.py deps server --build-policy missing` built Conan requirements.
+- `python3 tools/yt.py prune-conan` removed temporary recipe sources/build trees.
+- `actions/cache/save@v4` **saved Conan binaries before CMake build**.
+- `python3 tools/yt.py configure server --reuse-deps --sccache --linker mold --compile-jobs 4 --link-jobs 1` passed.
+- `python3 tools/yt.py build server --jobs 4 --ninja-stats` compiled and linked.
+- `python3 tools/yt.py test server --jobs 4 --ninja-stats` passed 16/16 CTest.
+
+| Measured stage | AMD64 | ARM64 |
+| --- | ---: | ---: |
+| Conan dependency install | 301.88s | 1016.32s |
+| Conan pruning | 43.77s | 21.27s |
+| CMake configure | 1.65s | 0.64s |
+| Server build | 45.28s | 55.56s |
+| Test build + CTest | 41.05s | 49.92s |
+| Total job | 7m41s | 19m45s |
+| sccache hit rate | 15.05% | 12.90% |
+| Tests | 16/16 | 16/16 |
+
+**Cache evidence:** AMD64 Conan cache had compressed size 145,659,012
+bytes (about 146 MB), upload ~3 seconds. Both cache saves completed.
+This is a **cold-run** result. No cache-hit improvement claimed yet.
+
+**Follow-up:** next PR run on the identical Conan hash should restore the
+cache and use `conan install --build=never`, proving that Qt source is
+not compiled in regular PRs. Do not update unrelated branch files while
+that run is in progress: PR synchronization cancels in-flight jobs.

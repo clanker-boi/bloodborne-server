@@ -5,7 +5,7 @@ Last updated: **2026-10-24**. See the append-only
 
 ## At-a-glance
 
-**State: Linux AMD64 and ARM64 server compiled and all 16 tests passed on the corrected CI run; other acceptance gates remain open.** Work is isolated in
+**State: Linux AMD64 and ARM64 optimized server builds (mold, sccache, Ninja job pools) passed all 16 tests each in CI #40137604748; other acceptance gates remain open.** Work is isolated in
 [draft PR #1](https://github.com/clanker-boi/bloodborne-server/pull/1).
 Neither server nor native client is yet certified against the new build.
 
@@ -43,7 +43,7 @@ Neither server nor native client is yet certified against the new build.
 
 ### Gate R: packaging and cutover
 - [ ] Reproducible lockfile/versioned dependency profiles
-- [ ] GitHub Actions local-vs-CI commands match and use cache safely
+- [x] GitHub Actions early Conan cache save and unified local build commands validated on both Linux targets (CI #40137604748); warm cache reuse still to be tested
 - [ ] Windows player installer/release artifacts match old feature set
 - [ ] SHA-256, SBOM/license notices and artifact provenance available
 - [ ] Remove legacy build/release entrypoints after parity tests
@@ -52,7 +52,7 @@ Neither server nor native client is yet certified against the new build.
 ## Performance branch test
 
 Implementation commit: `6440248` (CLI test correction `497cd56`).
-Optimized [Actions run #40137298135](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137298135) tests mold, sccache, Conan cache preservation and Ninja pools. **Still running as of this entry; no verified optimized CI pass yet.** The 16/16 ARM64 and AMD64 tests marked above belong to the earlier, unoptimized baseline.
+The first optimized [CI #40137604748](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748) **passed on AMD64 and ARM64** with 16/16 tests each, mold, sccache and bounded Ninja job pools. Conan caches were saved in each job before application compilation. Cold builds: AMD64 7m41s; ARM64 19m45s. See the journal for exact measurements. A separate cache-hit test is still required before claiming faster recurring builds.
 
 ## Known blockers and risks
 

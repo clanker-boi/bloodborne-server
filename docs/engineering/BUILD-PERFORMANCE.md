@@ -7,7 +7,7 @@ This document is a persistent companion to [BUILD_ARCHITECTURE.md](BUILD_ARCHITE
 
 ## Initial implementation (2026-10-24)
 
-Commit `6440248`, then test fix `497cd56`: Conan `deps` + early cache-save, fast sccache compiler launchers, mold/LLD selector (Linux only), CMake Ninja job pools, command timings and CLI unit tests. Default values outside CI are unchanged. This is not yet a completed benchmark: optimized [CI run #40137298135](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137298135) is the first mold/sccache test. PCH, unity, ThinLTO, distributed compile and GHCR binary promotion remain experiments, not enabled defaults.
+Commit `6440248`, then test fix `497cd56`: Conan `deps` + early cache-save, fast sccache compiler launchers, mold/LLD selector (Linux only), CMake Ninja job pools, command timings and CLI unit tests. Default values outside CI are unchanged. This is not yet a completed benchmark: optimized [CI run #40137604748](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748) passed with mold/sccache on both targets. PCH, unity, ThinLTO, distributed compile and GHCR binary promotion remain experiments, not enabled defaults.
 
 ## Objective
 
@@ -294,3 +294,20 @@ measured, documented budget on GitHub standard runners.
 - Ninja trace: https://github.com/nico/ninjatracing
 - Mold: https://github.com/rui314/mold
 - Conan job count: https://docs.conan.io/2/reference/tools/build.html
+
+## Implemented optimization evidence (2026-10-24)
+
+[Optimized cold CI #40137604748](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748) passed all server tests on both architectures. It used `YT_LINKER=mold`, sccache GHA backend, 4-way compile / 1-way link Ninja pools and saved Conan binary caches before CMake compilation.
+
+| Cold metric | AMD64 | ARM64 |
+| --- | ---: | ---: |
+| Conan install including large Qt source build | 301.88s | 1016.32s |
+| Conan source/build cache prune | 43.77s | 21.27s |
+| CMake configure using mold | 1.65s | 0.64s |
+| Application compile/link | 45.28s | 55.56s |
+| Test-target build and test | 41.05s | 49.92s |
+| sccache hit rate | 15.05% | 12.90% |
+| Full GitHub job duration | 7m41s | 19m45s |
+| CTest | 16/16 pass | 16/16 pass |
+
+AMD64's compressed Conan archive was **145,659,012 bytes (~146 MB)** after pruning, uploaded in about 3 seconds. Both architectures reported successful early cache saves. These numbers are not controlled attribution to individual compiler/linker optimizations. A **warm-cache run** must validate `--build=never` and quantify recurring PR time. PCH, unity, ThinLTO and GHCR images remain future, benchmark-gated work.
