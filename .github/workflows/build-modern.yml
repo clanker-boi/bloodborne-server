@@ -2,10 +2,32 @@ name: Modern build (server)
 on:
   push:
     branches: [build/modern-toolchain-conan-docker]
+    paths:
+      - CMakeLists.txt
+      - conanfile.py
+      - server/**
+      - tools/yt.py
+      - docker/build/**
+      - .github/workflows/build-modern.yml
   pull_request:
+    paths:
+      - CMakeLists.txt
+      - conanfile.py
+      - server/**
+      - tools/yt.py
+      - docker/build/**
+      - .github/workflows/build-modern.yml
   workflow_dispatch:
+
+# Limit branch/PR duplicate noise during build migration. Group by the actual
+# source branch for push and PR events, so every new commit supersedes an old job.
+concurrency:
+  group: modern-build-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   server:
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
