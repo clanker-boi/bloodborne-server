@@ -46,8 +46,8 @@ def configure(component: str, config: str, *, offline: bool = False) -> None:
     command = [
         "conan", "install", ".", "--output-folder", str(deps_dir),
         "-s:h", f"build_type={config}", "-s:b", "build_type=Release",
-        "-o", f"yharntogether-build/*:with_server={str(with_server)}",
-        "-o", f"yharntogether-build/*:with_native={str(with_native)}",
+        "-o", f"&:with_server={str(with_server)}",
+        "-o", f"&:with_native={str(with_native)}",
         "--build=missing",
     ]
     if offline:
