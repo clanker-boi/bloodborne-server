@@ -58,6 +58,12 @@ The first optimized [CI #40137604748](https://github.com/clanker-boi/bloodborne-
 
 Cold [run #40137604748](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748) passed 16 tests per architecture in **7m41s AMD64 / 19m45s ARM64**. Warm [run #40139233770](https://github.com/clanker-boi/bloodborne-server/actions/runs/40139233770) passed all tests in **51s AMD64 / 60s ARM64**, with 92/93 sccache hits and no Qt/Protobuf recompilation. See [BUILD_JOURNAL.md](BUILD_JOURNAL.md) for command timings and cache sizes. No runtime/gameplay smoke test, Windows build or GHCR provenance claim is made.
 
+## Intermittent test case and mitigation
+
+A documentation-triggered warm [CI #40139403227](https://github.com/clanker-boi/bloodborne-server/actions/runs/40139403227) had an intermittent AMD64 `bloodborne_backend_parity` failure (the wrong service responded HTTP 404), even though earlier runs passed. Investigation found the test allocated four independent `free_port()` ephemeral listener ports without holding sockets; duplicate allocations could target another service. The test also accepted any HTTP response during readiness, including 404.
+
+Commit `4b100db` changes the test to allocate four distinct simultaneously reserved ports and require HTTP 200 readiness. [CI #40139603742](https://github.com/clanker-boi/bloodborne-server/actions/runs/40139603742) subsequently passed 16/16 on both AMD64 and ARM64. This supports the fix but does not establish that all timing races are impossible.
+
 ## Known blockers and risks
 
 1. **Initial AMD64 CI failure fixed** (`find_package(protobuf)`); both architectures now pass compilation and the full 16-test suite at commit `7b834c9` in CI #40135063503. This does not verify a server runtime smoke test, Docker image, client, or release. Do not merge yet.

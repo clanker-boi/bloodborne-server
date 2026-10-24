@@ -220,3 +220,37 @@ reusing cached compiler objects, **not proven mold-only improvement**.
 promote immutable dependency package images/remote for long-lived cache
 survival, benchmark controlled linker/PCH/unity variants, add runtime
 headless smoke tests, and migrate Windows/native client build.
+
+## 2026-10-24 — warm-run flaky backend parity failure and test hardening
+
+**Failing run:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40139403227
+(commit `89b1de3`, documentation only after two successful optimized
+test matrices). ARM64 passed; AMD64 passed compilation and 15/16 tests,
+but `bloodborne_backend_parity` failed in
+`test_a_store_moves_between_the_servers`: shadnet responded HTTP 404
+on multiple backend requests for a store written by the Python backend.
+
+**Evidence:** Test `backend/tests/test_parity.py` called `free_port()`
+separately for all four shadnet service ports, closing each reservation
+before the next. That can inadvertently allocate the same ephemeral
+port more than once. `wait_for()` also treated any HTTP response to
+`/status`, including 404, as successful startup. This can allow a
+different shadnet listener to impersonate a healthy backend. The
+exact cause of this single failure cannot be proven from the CTest log
+alone, since the test deleted the temporary shadnet server logs.
+
+**Mitigation:** Commit `4b100db3a99b85bac5674066554541dac5a2230d`
+allocates all four listener ports with simultaneously open reservation
+sockets, closes them only after selecting **distinct** numbers, and
+requires an HTTP **200** response from the backend status endpoint
+before accepting readiness. No production network/game code changed.
+
+**Validation:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40139603742
+then passed **16/16 CTest on AMD64 and ARM64** with the port/readiness
+test improvement. Cache restore and mold/sccache remained enabled.
+This is regression mitigation, not a claim that every possible CI
+flakiness source has been eliminated.
+
+**Follow-up:** If this test ever fails again, retain and surface
+shadnet diagnostic logs before teardown; investigate cross-process
+port allocation and Qt backend binding separately from CI caching.
