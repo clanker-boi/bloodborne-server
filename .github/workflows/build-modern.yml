@@ -1,0 +1,35 @@
+name: Modern build (server)
+on:
+  push:
+    branches: [build/modern-toolchain-conan-docker]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  server:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang pipx python3
+          pipx install 'conan>=2.31,<3'
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Detect Conan build profile
+        run: conan profile detect --force
+      - name: Configure
+        run: python3 tools/yt.py configure server
+      - name: Build
+        run: python3 tools/yt.py build server --jobs 4
+      - name: Test
+        run: python3 tools/yt.py test server --jobs 4
