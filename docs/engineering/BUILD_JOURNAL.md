@@ -117,3 +117,31 @@ No reason yet to spend extensive time optimizing CTest scheduling.
 Ninja job pools, mold/LLD, sccache, PCH, unity and ThinLTO experiments.
 Prioritize pinned precompiled Conan binary packages; don't repeatedly
 compile Qt on normal PRs. Do not declare the build-system migration done.
+
+## 2026-10-24 — initial performance implementation on branch
+
+**Commit:** `6440248e86cbabe05dbc0b41154a54b7cbf5edbe`.
+Introduced canonical Conan `deps` phase, `--reuse-deps`, `--build-policy`
+(`missing` or `never`), Conan cache pruning, early `actions/cache/save`,
+versioned Conan 2.33.0 in CI, sccache compiler launchers, Linux mold/LLD
+linker selection, Ninja bounded compile/link job pools, timing/Ninja stats
+and Python CLI unit tests. Corrected one test's sccache discovery mock
+in commit `497cd562f5a0d7fcad1c650cca18538cc6d0a53d`.
+
+**Real CI test:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40137298135
+on Linux AMD64 and ARM64.
+Initial superseded run #40137259555 failed the CLI unit test because
+its mocked configure path still checked for an actual sccache executable;
+the unit test is fixed. The superseded run did not reach a compiler/linker
+test and was cancelled on the corrective commit.
+
+**State:** optimized CI still running when this entry was written;
+do not claim mold/sccache, early Conan cache reuse or improved elapsed
+time until the jobs finish. The unoptimized baseline remains
+[run #40135063503](https://github.com/clanker-boi/bloodborne-server/actions/runs/40135063503)
+(AMD64 9m21s, ARM64 19m19s, both 16/16 CTest passed).
+
+**Next:** inspect run #40137298135 for exact stage timings, cache hit/miss,
+sccache stats and 16-test result on both arches. Fix failures and compare
+warm-cache run with baseline cold source compilation. Test warm cache
+explicitly; one cold run cannot prove the benefit.

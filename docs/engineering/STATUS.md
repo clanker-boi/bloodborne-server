@@ -18,6 +18,9 @@ Neither server nor native client is yet certified against the new build.
 - [x] GitHub Actions Linux AMD64 and ARM64 server job definitions
 - [x] Protobuf target plumbing in `server/CMakeLists.txt`
 - [x] Persistent design, status and build-journal documentation
+- [x] Conan deps separated from app configure and early cache saving in CI (validation in progress)
+- [x] sccache, Linux mold/LLD selection and Ninja job-pool limits (validation in progress)
+- [x] CLI smoke/unit tests and per-stage build timing (validation in progress)
 
 ## Required acceptance gates
 
@@ -45,6 +48,11 @@ Neither server nor native client is yet certified against the new build.
 - [ ] SHA-256, SBOM/license notices and artifact provenance available
 - [ ] Remove legacy build/release entrypoints after parity tests
 - [ ] Update README to point only at final supported commands
+
+## Performance branch test
+
+Implementation commit: `6440248` (CLI test correction `497cd56`).
+Optimized [Actions run #40137298135](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137298135) tests mold, sccache, Conan cache preservation and Ninja pools. **Still running as of this entry; no verified optimized CI pass yet.** The 16/16 ARM64 and AMD64 tests marked above belong to the earlier, unoptimized baseline.
 
 ## Known blockers and risks
 

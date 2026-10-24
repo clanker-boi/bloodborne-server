@@ -1,9 +1,13 @@
 # Build-performance engineering plan
 
-Date: 2026-10-24. **Status: design and benchmark plan, not implementation.**
+Date: 2026-10-24. **Status: first optimization implementation committed, validation underway.**
 This document is a persistent companion to [BUILD_ARCHITECTURE.md](BUILD_ARCHITECTURE.md),
 [STATUS.md](STATUS.md), [BUILD_JOURNAL.md](BUILD_JOURNAL.md), and
 [draft PR #1](https://github.com/clanker-boi/bloodborne-server/pull/1).
+
+## Initial implementation (2026-10-24)
+
+Commit `6440248`, then test fix `497cd56`: Conan `deps` + early cache-save, fast sccache compiler launchers, mold/LLD selector (Linux only), CMake Ninja job pools, command timings and CLI unit tests. Default values outside CI are unchanged. This is not yet a completed benchmark: optimized [CI run #40137298135](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137298135) is the first mold/sccache test. PCH, unity, ThinLTO, distributed compile and GHCR binary promotion remain experiments, not enabled defaults.
 
 ## Objective
 
