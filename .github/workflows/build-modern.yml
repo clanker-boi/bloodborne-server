@@ -95,6 +95,19 @@ jobs:
         run: python3 tools/yt.py build server --jobs 4 --ninja-stats
       - name: Test
         run: python3 tools/yt.py test server --jobs 4 --ninja-stats
+      - name: Stage headless server binary and runtime libraries
+        run: python3 tools/package_server.py
+      - name: Smoke test headless server startup, database and restart
+        run: python3 tools/smoke_server.py --stage out/yt/server/release/stage
+      - name: Smoke test packaged non-root Docker image
+        run: python3 tools/smoke_container.py --stage out/yt/server/release/stage
+      - name: Publish headless server staging artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadnet-headless-${{ matrix.arch }}
+          path: out/yt/server/release/stage
+          retention-days: 7
+          if-no-files-found: error
       - name: sccache compilation statistics
         if: always()
         run: |

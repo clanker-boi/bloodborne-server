@@ -27,6 +27,8 @@ def main():
         copy2(ROOT / "docker/server" / name, stage / name)
     command("docker", "build", "-f", str(ROOT / "docker/server/Dockerfile"), "-t", args.image, str(stage))
     with tempfile.TemporaryDirectory(prefix="yt-docker-") as folder:
+        # Docker's non-root UID 10001 must be able to initialize this bind mount.
+        Path(folder).chmod(0o777)
         name = "yt-smoke-" + str(time.monotonic_ns())
         for iteration in range(2):
             try:

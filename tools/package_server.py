@@ -34,6 +34,12 @@ def linked_libraries(binary: Path, *, extra_paths: list[Path] | None = None) -> 
     return paths
 
 
+def soname(path: Path) -> str | None:
+    output = subprocess.check_output(["readelf", "-d", str(path)], text=True)
+    match = re.search(r"\(SONAME\).*\[(.+?)\]", output)
+    return match.group(1) if match else None
+
+
 def package(binary: Path, dest: Path, *, conan_home: Path) -> None:
     if not binary.is_file():
         raise FileNotFoundError(f"Build the server before staging: {binary}")
@@ -93,6 +99,14 @@ def package(binary: Path, dest: Path, *, conan_home: Path) -> None:
             raise RuntimeError(f"Collision between Conan runtime libraries: {names[name]} and {path}")
         names[name] = path
         shutil.copy2(path, root / "lib" / name)
+        # ldd resolves symlinks to the full-version ELF; the runtime linker
+        # requests its DT_SONAME (for Qt this is e.g. libQt6Core.so.6).
+        expected = soname(path)
+        if expected and expected != name:
+            alias = root / "lib" / expected
+            if alias.exists():
+                raise RuntimeError(f"Conflicting SONAME for {expected}")
+            alias.symlink_to(name)
     if not selected:
         raise RuntimeError("No Conan shared libraries detected; refuse to package incomplete runtime")
     print(f"Staged {binary.name}, Qt SQLite plugin and {len(selected)} Conan shared libraries at {dest}")
