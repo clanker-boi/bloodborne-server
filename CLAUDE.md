@@ -7,6 +7,7 @@ This fork is actively replacing its build system. **Before changing code**, read
 2. [Build-system architecture](docs/engineering/BUILD_ARCHITECTURE.md)
 3. [Architecture decisions](docs/engineering/DECISIONS.md)
 4. [Build attempts, CI evidence and failures](docs/engineering/BUILD_JOURNAL.md)
+5. [Build performance design and benchmarks](docs/engineering/BUILD-PERFORMANCE.md)
 
 The work belongs on branch `build/modern-toolchain-conan-docker`, draft
 PR https://github.com/clanker-boi/bloodborne-server/pull/1, never straight
