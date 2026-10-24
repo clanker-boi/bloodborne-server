@@ -311,3 +311,19 @@ measured, documented budget on GitHub standard runners.
 | CTest | 16/16 pass | 16/16 pass |
 
 AMD64's compressed Conan archive was **145,659,012 bytes (~146 MB)** after pruning, uploaded in about 3 seconds. Both architectures reported successful early cache saves. These numbers are not controlled attribution to individual compiler/linker optimizations. A **warm-cache run** must validate `--build=never` and quantify recurring PR time. PCH, unity, ThinLTO and GHCR images remain future, benchmark-gated work.
+
+## Verified warm-cache outcome
+
+[Run #40139233770](https://github.com/clanker-boi/bloodborne-server/actions/runs/40139233770)
+confirmed exact Conan cache restoration, `--build=never` and sccache
+reuse in an entirely new runner. AMD64 cached Conan archive **146 MB**,
+ARM64 **211 MB**; Conan graph resolution **1.12s / 0.84s**, application
+build **7.32s / 8.70s**, test build+CTest **7.17s / 7.58s**. The complete
+jobs finished in **51s / 60s**, each **16/16 CTest passed** with
+**92 of 93 sccache hits (98.92%)**.
+
+This validates the P0 GitHub Actions cache mechanism and first compiler
+cache integration. It does **not** isolate mold vs LLD, prove PCH/unity
+benefits, or validate gameplay or Windows. GHCR/Conan remotes are still
+valuable for long-lived availability and cache eviction recovery, but
+need a trusted publishing workflow and pinned lockfiles before adoption.

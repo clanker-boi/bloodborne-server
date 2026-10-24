@@ -43,7 +43,7 @@ Neither server nor native client is yet certified against the new build.
 
 ### Gate R: packaging and cutover
 - [ ] Reproducible lockfile/versioned dependency profiles
-- [x] GitHub Actions early Conan cache save and unified local build commands validated on both Linux targets (CI #40137604748); warm cache reuse still to be tested
+- [x] GitHub Actions early Conan cache save and **warm binary restore** verified on AMD64 + ARM64 (cold #40137604748, warm #40139233770)
 - [ ] Windows player installer/release artifacts match old feature set
 - [ ] SHA-256, SBOM/license notices and artifact provenance available
 - [ ] Remove legacy build/release entrypoints after parity tests
@@ -52,7 +52,11 @@ Neither server nor native client is yet certified against the new build.
 ## Performance branch test
 
 Implementation commit: `6440248` (CLI test correction `497cd56`).
-The first optimized [CI #40137604748](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748) **passed on AMD64 and ARM64** with 16/16 tests each, mold, sccache and bounded Ninja job pools. Conan caches were saved in each job before application compilation. Cold builds: AMD64 7m41s; ARM64 19m45s. See the journal for exact measurements. A separate cache-hit test is still required before claiming faster recurring builds.
+The first optimized [CI #40137604748](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748) **passed on AMD64 and ARM64** with 16/16 tests each, mold, sccache and bounded Ninja job pools. Conan caches were saved in each job before application compilation. Cold builds: AMD64 7m41s; ARM64 19m45s. See the journal for exact measurements. **Warm cache verified:** [CI #40139233770](https://github.com/clanker-boi/bloodborne-server/actions/runs/40139233770) restored cached Qt/Protobuf on both architectures and passed all 16 CTests each with `--build=never`; AMD64 full job 51s, ARM64 60s. Both had 92/93 sccache hits (98.92%).
+
+## Verified warm-cache outcome
+
+Cold [run #40137604748](https://github.com/clanker-boi/bloodborne-server/actions/runs/40137604748) passed 16 tests per architecture in **7m41s AMD64 / 19m45s ARM64**. Warm [run #40139233770](https://github.com/clanker-boi/bloodborne-server/actions/runs/40139233770) passed all tests in **51s AMD64 / 60s ARM64**, with 92/93 sccache hits and no Qt/Protobuf recompilation. See [BUILD_JOURNAL.md](BUILD_JOURNAL.md) for command timings and cache sizes. No runtime/gameplay smoke test, Windows build or GHCR provenance claim is made.
 
 ## Known blockers and risks
 

@@ -181,3 +181,42 @@ This is a **cold-run** result. No cache-hit improvement claimed yet.
 cache and use `conan install --build=never`, proving that Qt source is
 not compiled in regular PRs. Do not update unrelated branch files while
 that run is in progress: PR synchronization cancels in-flight jobs.
+
+## 2026-10-24 — warm cache validation: both architectures PASSED
+
+**Run:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40139233770
+(commit `5f777f0`, documentation synchronization after the successful
+optimized cold build). All **16/16 CTests on AMD64 and ARM64 passed**.
+
+**Cache behavior verified from logs:**
+- GitHub `actions/cache/restore@v4` restored Conan binaries from the exact previous key;
+  AMD64 archive **145,659,012 bytes (~146 MB)**, ARM64 archive
+  **210,645,227 bytes (~211 MB)**.
+- `python3 tools/yt.py deps server --build-policy never` completed
+  successfully in **1.12s AMD64 / 0.84s ARM64**.
+- The cache-miss `--build=missing` phase was skipped; no Qt source
+  compilation occurred.
+- `sccache` reported **92 hits / 93 requests (98.92%)** on both
+  architectures, with no cache errors reported.
+
+| Warm stage | AMD64 | ARM64 |
+| --- | ---: | ---: |
+| Conan deps (`--build=never`) | 1.12s | 0.84s |
+| CMake configure with mold | 0.94s | 3.08s |
+| Full project build | 7.32s | 8.70s |
+| Test binaries + CTest | 7.17s | 7.58s |
+| Full GitHub Actions job | **51s** | **60s** |
+| CTest | 16/16 passed | 16/16 passed |
+
+**Comparison to optimized cold job #40137604748:** AMD64
+7m41s -> **51s** (~9.0x); ARM64 19m45s -> **60s**
+(~19.8x). These are actual wall-clock jobs, not projections.
+Application code was unchanged between runs, which maximized sccache
+hits; normal source changes will recompile affected translation units.
+Most speedup comes from avoiding Conan Qt dependency source builds and
+reusing cached compiler objects, **not proven mold-only improvement**.
+
+**Future work:** pin Conan dependency lockfile and compiler profiles,
+promote immutable dependency package images/remote for long-lived cache
+survival, benchmark controlled linker/PCH/unity variants, add runtime
+headless smoke tests, and migrate Windows/native client build.
