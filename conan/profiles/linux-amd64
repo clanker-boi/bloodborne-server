@@ -1,0 +1,13 @@
+# Pinned Conan 2 profile: Ubuntu 24.04, GCC 13, libstdc++11
+# Tested CI compiler identity; update intentionally after toolchain audit.
+[settings]
+os=Linux
+arch=x86_64
+compiler=gcc
+compiler.version=13
+compiler.libcxx=libstdc++11
+compiler.cppstd=gnu17
+build_type=Release
+
+[conf]
+tools.build:jobs=4

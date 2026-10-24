@@ -37,6 +37,25 @@ def free_port():
         return s.getsockname()[1]
 
 
+def distinct_free_ports(count):
+    """Reserve ports simultaneously so shadnet's four listeners don't collide.
+
+    Four separate free_port() calls can return the same recently released
+    ephemeral port. The wrong listener may start and reply to backend
+    requests with 404 while the actual backend fails to bind.
+    """
+    sockets = []
+    try:
+        for _ in range(count):
+            sock = socket.socket()
+            sockets.append(sock)
+            sock.bind(("127.0.0.1", 0))
+        return [sock.getsockname()[1] for sock in sockets]
+    finally:
+        for sock in sockets:
+            sock.close()
+
+
 def wait_for(port, proc, what):
     deadline = time.time() + 20
     while time.time() < deadline:
@@ -45,9 +64,13 @@ def wait_for(port, proc, what):
         try:
             conn = http.client.HTTPConnection("127.0.0.1", port, timeout=1)
             conn.request("GET", "/status")
-            conn.getresponse().read()
+            response = conn.getresponse()
+            response.read()
             conn.close()
-            return
+            # A listening but WRONG service can respond with 404. Require
+            # the expected backend's successful /status, not just open TCP.
+            if response.status == 200:
+                return
         except OSError:
             time.sleep(0.1)
     raise RuntimeError("{} did not start".format(what))
@@ -59,7 +82,10 @@ class Server:
     def __init__(self, kind, workdir, store=None, show_own="", tomb_cap=100, summon_poll=5,
                  address=None, flag="true"):
         self.kind = kind
-        self.port = free_port()
+        if kind == "shadnet":
+            self.port, self.webapi_port, unsecured_port, matching_udp_port = distinct_free_ports(4)
+        else:
+            self.port = free_port()
         self.workdir = workdir
         os.makedirs(workdir, exist_ok=True)
         files = os.path.join(workdir, "files")
@@ -82,12 +108,11 @@ class Server:
                 args += ["--show-own", show_own]
             self.proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:
-            self.webapi_port = free_port()
             os.makedirs(os.path.join(workdir, "db"), exist_ok=True)
             config = {
                 "Host": "127.0.0.1",
-                "UnsecuredPort": free_port(),
-                "MatchingUdpPort": free_port(),
+                "UnsecuredPort": unsecured_port,
+                "MatchingUdpPort": matching_udp_port,
                 "WebApiPort": self.webapi_port,
                 "StatsEnabled": "false",
                 "BloodborneSeamlessCoop": "true",

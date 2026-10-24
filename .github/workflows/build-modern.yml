@@ -1,0 +1,150 @@
+name: Modern build (server)
+on:
+  push:
+    branches: [main]
+    paths:
+      - CMakeLists.txt
+      - conanfile.py
+      - conan/profiles/**
+      - conan/locks/**
+      - server/**
+      - tools/yt.py
+      - tools/tests/**
+      - docker/build/**
+      - .github/workflows/build-modern.yml
+  pull_request:
+    paths:
+      - CMakeLists.txt
+      - conanfile.py
+      - conan/profiles/**
+      - conan/locks/**
+      - server/**
+      - tools/yt.py
+      - tools/tests/**
+      - docker/build/**
+      - .github/workflows/build-modern.yml
+  workflow_dispatch:
+    inputs:
+      linker:
+        description: "ELF linker for server CI"
+        type: choice
+        options: [default, mold, lld]
+        default: mold
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: modern-build-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    env:
+      SCCACHE_GHA_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build clang lld mold pipx python3
+          pipx install conan==2.33.0
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Detect Conan build profile
+        run: conan profile detect --force
+      - name: Unit test canonical build CLI
+        run: python3 -m unittest discover -s tools/tests -v
+      - name: Restore Conan binary packages
+        id: conan-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.conan2
+          key: conan2.33-minqt-v2-${{ matrix.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}
+      # A package snapshot in GHCR survives short-lived Actions cache eviction.
+      # Read-only pull; if unavailable, the normal Conan source fallback remains.
+      - name: Authenticate to GHCR for read-only package restore
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Restore binary package snapshot from GHCR on Actions cache miss
+        id: ghcr
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        env:
+          CACHE_IMAGE: ghcr.io/clanker-boi/yharnam-conan-cache:lock-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}-${{ matrix.arch }}
+        run: |
+          if docker pull "$CACHE_IMAGE"; then
+            mkdir -p "$HOME/.conan2"
+            cid="$(docker create "$CACHE_IMAGE")"
+            docker cp "$cid:/conan-cache/." "$HOME/.conan2/"
+            docker rm "$cid"
+            echo 'restored=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'restored=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Prepare Conan dependencies (cache hit)
+        if: steps.conan-cache.outputs.cache-hit == 'true' || steps.ghcr.outputs.restored == 'true'
+        run: python3 tools/yt.py deps server --build-policy never
+      - name: Prepare Conan dependencies (cache miss)
+        if: steps.conan-cache.outputs.cache-hit != 'true' && steps.ghcr.outputs.restored != 'true'
+        run: |
+          python3 tools/yt.py deps server --build-policy missing
+          python3 tools/yt.py prune-conan
+      # Save before app configure/build/tests. A later application failure cannot
+      # discard successful Qt/Protobuf compilation on a fresh runner.
+      - name: Save Conan binary cache before application build
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.conan2
+          key: ${{ steps.conan-cache.outputs.cache-primary-key }}
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Configure with memory-aware Ninja pools and mold
+        run: |
+          python3 tools/yt.py configure server --reuse-deps \
+            --sccache --linker "${{ inputs.linker || 'mold' }}" \
+            --compile-jobs 4 --link-jobs 1
+      - name: Build
+        run: python3 tools/yt.py build server --jobs 4 --ninja-stats
+      - name: Test
+        run: python3 tools/yt.py test server --jobs 4 --ninja-stats
+      - name: Stage headless server binary and runtime libraries
+        run: python3 tools/package_server.py
+      - name: Smoke test headless server startup, database and restart
+        run: python3 tools/smoke_server.py --stage out/yt/server/release/stage
+      - name: Smoke test packaged non-root Docker image
+        run: python3 tools/smoke_container.py --stage out/yt/server/release/stage
+      - name: Pack standalone server preserving modes and symlinks
+        run: |
+          tar -C out/yt/server/release/stage -czf "out/yt/server/release/shadnet-linux-${{ matrix.arch }}.tar.gz" .
+          cd out/yt/server/release
+          sha256sum "shadnet-linux-${{ matrix.arch }}.tar.gz" > "shadnet-linux-${{ matrix.arch }}.sha256"
+      - name: Upload checksum-verified standalone server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadnet-headless-${{ matrix.arch }}
+          path: |
+            out/yt/server/release/shadnet-linux-${{ matrix.arch }}.tar.gz
+            out/yt/server/release/shadnet-linux-${{ matrix.arch }}.sha256
+          retention-days: 14
+          if-no-files-found: error
+      - name: sccache compilation statistics
+        if: always()
+        run: |
+          if command -v sccache >/dev/null; then sccache --show-stats; fi

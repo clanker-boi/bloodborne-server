@@ -21,7 +21,15 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network Sql Concurrent HttpServer)
 
-add_subdirectory(externals)
+if(YT_USE_CONAN)
+    find_package(protobuf CONFIG REQUIRED)
+    set(YT_PROTOBUF_LIB protobuf::libprotobuf)
+    set(YT_PROTOC protobuf::protoc)
+else()
+    add_subdirectory(externals)
+    set(YT_PROTOBUF_LIB libprotobuf)
+    set(YT_PROTOC protoc)
+endif()
 
 set(PROTO_OUT "${CMAKE_CURRENT_BINARY_DIR}/proto_gen")
 file(MAKE_DIRECTORY "${PROTO_OUT}")
@@ -30,13 +38,13 @@ add_custom_command(
     OUTPUT
         "${PROTO_OUT}/shadnet.pb.cc"
         "${PROTO_OUT}/shadnet.pb.h"
-    COMMAND $<TARGET_FILE:protoc>
+    COMMAND $<TARGET_FILE:${YT_PROTOC}>
         "--proto_path=${CMAKE_CURRENT_SOURCE_DIR}/src"
         "--cpp_out=${PROTO_OUT}"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/shadnet.proto"
     DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/src/shadnet.proto"
-        protoc
+        ${YT_PROTOC}
     COMMENT "Generating shadnet protobuf sources"
     VERBATIM
 )
@@ -47,13 +55,13 @@ add_custom_command(
     OUTPUT
         "${PROTO_OUT}/coop.pb.cc"
         "${PROTO_OUT}/coop.pb.h"
-    COMMAND $<TARGET_FILE:protoc>
+    COMMAND $<TARGET_FILE:${YT_PROTOC}>
         "--proto_path=${CMAKE_CURRENT_SOURCE_DIR}/coop"
         "--cpp_out=${PROTO_OUT}"
         "${CMAKE_CURRENT_SOURCE_DIR}/coop/coop.proto"
     DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/coop/coop.proto"
-        protoc
+        ${YT_PROTOC}
     COMMENT "Generating the co-op protobuf sources"
     VERBATIM
 )
@@ -162,7 +170,7 @@ target_include_directories(shadnet PRIVATE
     src
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${PROTO_OUT}"                                    
-    "${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src"
+    "$<$<NOT:$<BOOL:${YT_USE_CONAN}>>:${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src>"
 )
 
 target_link_libraries(shadnet PRIVATE
@@ -171,7 +179,7 @@ target_link_libraries(shadnet PRIVATE
     Qt6::Sql
     Qt6::Concurrent
     Qt6::HttpServer
-    libprotobuf
+    ${YT_PROTOBUF_LIB}
 )
 
 if(BUILD_TESTING)
@@ -250,9 +258,9 @@ if(BUILD_TESTING)
         src
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${PROTO_OUT}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src"
+        "$<$<NOT:$<BOOL:${YT_USE_CONAN}>>:${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src>"
     )
-    target_link_libraries(test_bloodborne_world PRIVATE Qt6::Core libprotobuf)
+    target_link_libraries(test_bloodborne_world PRIVATE Qt6::Core ${YT_PROTOBUF_LIB})
     add_test(NAME bloodborne_world COMMAND test_bloodborne_world)
 
     add_executable(test_team_lobby EXCLUDE_FROM_ALL
@@ -262,9 +270,9 @@ if(BUILD_TESTING)
     target_include_directories(test_team_lobby PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${PROTO_OUT}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src"
+        "$<$<NOT:$<BOOL:${YT_USE_CONAN}>>:${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src>"
     )
-    target_link_libraries(test_team_lobby PRIVATE libprotobuf)
+    target_link_libraries(test_team_lobby PRIVATE ${YT_PROTOBUF_LIB})
     add_test(NAME team_lobby COMMAND test_team_lobby)
 
     add_executable(test_room_owner EXCLUDE_FROM_ALL tests/test_room_owner.cpp)
@@ -279,9 +287,9 @@ if(BUILD_TESTING)
     target_include_directories(test_bloodborne_trade PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${PROTO_OUT}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src"
+        "$<$<NOT:$<BOOL:${YT_USE_CONAN}>>:${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src>"
     )
-    target_link_libraries(test_bloodborne_trade PRIVATE libprotobuf)
+    target_link_libraries(test_bloodborne_trade PRIVATE ${YT_PROTOBUF_LIB})
     add_test(NAME bloodborne_trade COMMAND test_bloodborne_trade)
 
     add_executable(test_accounts EXCLUDE_FROM_ALL tests/test_accounts.cpp src/database.cpp)
@@ -312,3 +320,15 @@ add_custom_command(TARGET shadnet POST_BUILD
 
 install(TARGETS shadnet RUNTIME DESTINATION bin)
 install(FILES worlds.cfg scoreboards.cfg DESTINATION bin)
+# Test binaries are deliberately excluded from the normal 'all' build. Expose
+# one aggregate target so the canonical test command can compile all of them
+# without enumerating source-specific test targets in a Python or shell script.
+if(BUILD_TESTING)
+    get_property(_yt_server_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    add_custom_target(yt-server-tests)
+    foreach(_yt_target IN LISTS _yt_server_targets)
+        if(_yt_target MATCHES "^test_")
+            add_dependencies(yt-server-tests ${_yt_target})
+        endif()
+    endforeach()
+endif()
