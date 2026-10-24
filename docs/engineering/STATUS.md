@@ -84,18 +84,17 @@ Commit `4b100db` changes the test to allocate four distinct simultaneously reser
 ## Headless release proof (2026-10-24)
 
 - [x] Exact Conan lockfile generated from real native AMD64 and ARM64 jobs ([run #40142122685](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142122685)); both produced identical recipe-revision graphs.
-- [x] Packed, tested headless server on both AMD64 and ARM64 ([run #40142312225](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142312225)).
-- [x] Trusted publishing jobs for both architectures passed ([run #40142307045](https://github.com/clanker-boi/bloodborne-server/actions/runs/40142307045)).
-- [x] Multiarch **server** manifest published at `ghcr.io/clanker-boi/yharnam-server:git-445a63b49cc4e3827a9e5cb4cc68c7c1c17c28a2` with digest `sha256:bd08d820f1dc045c784210d9234c3dbd3149c439737da0ce5fd76ee7cd339d79`.
-- [ ] Multiarch **Conan cache** manifest retry pending; initial release job failed because its manifest job omitted checkout, giving an empty `hashFiles` expression. The manifest job is fixed in the subsequent commit.
-- [ ] Independent **clean Conan home** GHCR restore test is pending from `.github/workflows/verify-deps-image.yml`. Local Actions cache hits are already proven.
+- [x] Packed and tested headless server on both AMD64 and ARM64 with license notices, file checksums and standalone archives ([final CI #40143857302](https://github.com/clanker-boi/bloodborne-server/actions/runs/40143857302), jobs 92s/69s).
+- [x] Trusted publishing jobs for both architectures **and both manifests** passed ([final run #40143853161](https://github.com/clanker-boi/bloodborne-server/actions/runs/40143853161)); per-arch tarballs with SHA256 artifacts uploaded.
+- [x] Final audited multiarch **server** manifest published at `ghcr.io/clanker-boi/yharnam-server:git-77e3106453f77251b4a20b7f8d5035548c7b8e2c` with digest `sha256:3df8277ef2c8b71091695f6ca11670e1a437f7f0f2f727e355f6e46d72a7fde4`. Includes checksum manifest and third-party notices. Earlier build's digest remains in journal.
+- [x] Multiarch **Conan cache** manifest published in [final run #40143853161](https://github.com/clanker-boi/bloodborne-server/actions/runs/40143853161), digest `sha256:66331832025c15f92d244747dfd599ded82f6a2d70c190e9896c816a9a5f13f7`. Initial checkout failure is recorded and fixed.
+- [x] Independent **clean Conan home** GHCR restore with `--build=never` passed on AMD64 and ARM64 in [CI #40143853112](https://github.com/clanker-boi/bloodborne-server/actions/runs/40143853112).
 - [ ] Team-world persistence from real gameplay and native Windows client compatibility remain untested. Docker smoke verifies filesystem state retention, not gameplay.
 
 ## Immediate next actions
 
-1. Implement caching strategy and benchmark plan in [BUILD-PERFORMANCE.md](BUILD-PERFORMANCE.md); preserve clean full-source builds as audit jobs. Measure dependency source builds, compiler critical path and object-cache hit rate.
-2. Start shadnet in CI, poll WebAPI `/status`, and run an integration smoke
-   test; ensure server doesn't depend on a game install.
+1. Headless server and Conan-cache image publication is now verified. Next: test server persistence with *real co-op world state* and an actual client, then consider runtime security hardening/backup automation; see [HEADLESS-SERVER.md](HEADLESS-SERVER.md).
+2. The direct and container headless smoke tests now pass without game assets; expand them to exercise real game networking rather than a sentinel-only persistence check.
 3. Finalize container build/runtime stages, non-root volume, health check.
 4. Inventory every `bbport/build.sh` hand-compiled source/flag and move it
    into root CMake, proving native Linux x86_64 parity.

@@ -84,7 +84,7 @@ compatible with the Ubuntu 24.04 runtime base. The Qt plugin/SONAME
 discovery script requires smoke testing on both architectures.
 
 ## ADR-008 — GHCR binary-snapshot fallback and trusted image publication
-**Date:** 2026-10-24. **Status:** Implementation staged; clean-cache restore pending.
+**Date:** 2026-10-24. **Status:** Implemented, real clean-home AMD64/ARM64 GHCR restore verified.
 
 **Decision:** GHCR stores architecture-specific Conan *binary package*
 snapshots in OCI data images keyed by Conan recipe/profile/lock hash.

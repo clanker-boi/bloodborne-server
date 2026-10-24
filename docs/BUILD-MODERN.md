@@ -57,6 +57,17 @@ to include OS, architecture, Conan version, ABI and dependency graph.
 CI currently uses Conan 2.33.0 and builds the application via Ninja.
 See [engineering/BUILD-PERFORMANCE.md](engineering/BUILD-PERFORMANCE.md).
 
+## Headless server release and deployment
+
+The Linux server pipeline has now been built, packaged, tested and
+published for native AMD64 and ARM64. See
+[engineering/HEADLESS-SERVER.md](engineering/HEADLESS-SERVER.md) for
+verified OCI digests, pinned Conan dependency cache snapshots, Docker
+deployment, network security, backups and exact acceptance boundaries.
+
+The native game/renderer and Windows release pipeline have **not**
+been migrated/validated to the same level.
+
 ## Platform matrix (intended, not yet fully validated)
 
 | Component | Windows x86_64 | Linux x86_64 | Linux arm64 |

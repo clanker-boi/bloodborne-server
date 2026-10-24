@@ -294,3 +294,53 @@ recovery test.
 recreation and validates SQL initialization. It does **not** demonstrate
 a live joined co-op party or actual multiplayer world progression.
 Native Windows client/installer parity remains open.
+
+## 2026-10-24 — finalized audited headless release: multiarch server + Conan cache PASS
+
+**PR:** https://github.com/clanker-boi/bloodborne-server/pull/1
+**Build branch:** `build/modern-toolchain-conan-docker`
+**Implementation commit:** `77e3106453f77251b4a20b7f8d5035548c7b8e2c`
+
+**Canonical CI:** https://github.com/clanker-boi/bloodborne-server/actions/runs/40143857302
+passed Linux AMD64 and ARM64. Both compiled and linked shadnet, passed
+their CTests, packaged a standalone runtime with Conan Qt shared libs,
+Qt SQLite plugin, third-party license notices and SHA256 per-file manifest,
+passed the direct and non-root Docker startup/restart smoke tests, then
+created release candidate `.tar.gz` and `.sha256` archives preserving
+ELF modes and symlinks. Full jobs **92s AMD64 / 69s ARM64**. Uploaded
+`shadnet-headless-amd64` and `shadnet-headless-arm64` artifacts of
+approximately **11–12 MB** each (artifacts retained 14 days).
+
+**Registry recovery CI:**
+https://github.com/clanker-boi/bloodborne-server/actions/runs/40143853112
+passed on AMD64 and ARM64, restoring a GHCR Conan binary snapshot into a
+new, empty Conan home and running `yt.py deps server --build-policy never`.
+This verifies registry fallback independently of the Actions cache.
+
+**Final trusted publisher:**
+https://github.com/clanker-boi/bloodborne-server/actions/runs/40143853161
+all three jobs succeeded (native AMD64, native ARM64, multiarch manifest
+assembly), with validated license notices, standalone archive and Docker
+image. Published OCI tags and **actual registry digest values**:
+
+```text
+SERVER
+ghcr.io/clanker-boi/yharnam-server:git-77e3106453f77251b4a20b7f8d5035548c7b8e2c
+sha256:3df8277ef2c8b71091695f6ca11670e1a437f7f0f2f727e355f6e46d72a7fde4
+
+CONAN BINARY SNAPSHOT
+ghcr.io/clanker-boi/yharnam-conan-cache:lock-2caf82d9122d417db3e162a8db2199821ae50f8fc76e8abe58059ddb481a0c77
+sha256:66331832025c15f92d244747dfd599ded82f6a2d70c190e9896c816a9a5f13f7
+```
+
+The published server manifest explicitly names **linux/amd64** and
+**linux/arm64**, with both image contents compiled, linked and tested by
+native architecture runners. Both package architectures are represented
+in the cache manifest.
+
+**Limits:** no real Bloodborne client session or multiplayer team-world
+journal was exercised; persistence smoke verifies SQL store, runtime
+startup and mounted filesystem data. The game's native Windows build,
+installer/release parity, true bitwise toolchain reproducibility and
+legacy script replacement remain outside this validated milestone.
+GHCR package visibility may require authentication for non-owner pulls.

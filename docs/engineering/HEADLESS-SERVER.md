@@ -6,6 +6,35 @@
 >
 > No Bloodborne game files are included in the headless server artifact.
 
+## Verified multiarch deployment candidate (2026-10-24)
+
+The trusted final publisher [CI #40143853161](https://github.com/clanker-boi/bloodborne-server/actions/runs/40143853161) succeeded on both native architectures and published:
+
+```text
+ghcr.io/clanker-boi/yharnam-server:git-77e3106453f77251b4a20b7f8d5035548c7b8e2c
+sha256:3df8277ef2c8b71091695f6ca11670e1a437f7f0f2f727e355f6e46d72a7fde4
+```
+
+The corresponding Conan package snapshot is:
+
+```text
+ghcr.io/clanker-boi/yharnam-conan-cache:lock-2caf82d9122d417db3e162a8db2199821ae50f8fc76e8abe58059ddb481a0c77
+sha256:66331832025c15f92d244747dfd599ded82f6a2d70c190e9896c816a9a5f13f7
+```
+
+Actual direct-binary and non-root Docker smoke checks passed in
+[CI #40143857302](https://github.com/clanker-boi/bloodborne-server/actions/runs/40143857302).
+Independent clean-home Conan restoration with `--build=never` passed on
+both architectures in [CI #40143853112](https://github.com/clanker-boi/bloodborne-server/actions/runs/40143853112).
+Both standalone release tarballs are attached as GitHub Actions artifacts
+on the build/publishing runs, with separate SHA256 checksum files.
+GHCR packages may initially be private; authenticate before pulling if needed.
+The image can be pinned using:
+
+```sh
+docker pull ghcr.io/clanker-boi/yharnam-server@sha256:3df8277ef2c8b71091695f6ca11670e1a437f7f0f2f727e355f6e46d72a7fde4
+```
+
 ## Canonical build architecture
 
 The root `CMakeLists.txt` owns compilation. `conanfile.py` provides the
