@@ -33,6 +33,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: modern-build-${{ github.event.pull_request.head.ref || github.ref_name }}
@@ -72,11 +73,28 @@ jobs:
         with:
           path: ~/.conan2
           key: conan2.33-minqt-v2-${{ matrix.os }}-${{ runner.arch }}-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}
+      # A package snapshot in GHCR survives short-lived Actions cache eviction.
+      # Read-only pull; if unavailable, the normal Conan source fallback remains.
+      - name: Restore binary package snapshot from GHCR on Actions cache miss
+        id: ghcr
+        if: steps.conan-cache.outputs.cache-hit != 'true'
+        env:
+          CACHE_IMAGE: ghcr.io/clanker-boi/yharnam-conan-cache:lock-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}-${{ matrix.arch }}
+        run: |
+          if docker pull "$CACHE_IMAGE"; then
+            mkdir -p "$HOME/.conan2"
+            cid="$(docker create "$CACHE_IMAGE")"
+            docker cp "$cid:/conan-cache/." "$HOME/.conan2/"
+            docker rm "$cid"
+            echo 'restored=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'restored=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Prepare Conan dependencies (cache hit)
-        if: steps.conan-cache.outputs.cache-hit == 'true'
+        if: steps.conan-cache.outputs.cache-hit == 'true' || steps.ghcr.outputs.restored == 'true'
         run: python3 tools/yt.py deps server --build-policy never
       - name: Prepare Conan dependencies (cache miss)
-        if: steps.conan-cache.outputs.cache-hit != 'true'
+        if: steps.conan-cache.outputs.cache-hit != 'true' && steps.ghcr.outputs.restored != 'true'
         run: |
           python3 tools/yt.py deps server --build-policy missing
           python3 tools/yt.py prune-conan

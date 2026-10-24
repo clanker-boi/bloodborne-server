@@ -1,0 +1,125 @@
+name: Publish headless server and Conan dependency images
+
+on:
+  push:
+    branches: [build/modern-toolchain-conan-docker]
+    paths:
+      - conanfile.py
+      - conan/**
+      - docker/deps/**
+      - docker/server/**
+      - tools/package_server.py
+      - tools/smoke_server.py
+      - tools/smoke_container.py
+      - .github/workflows/publish-images.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# Only trusted direct branch pushes publish. Never publish from PR or fork code.
+concurrency:
+  group: yt-image-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    if: github.repository == 'clanker-boi/bloodborne-server' && github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Install pinned toolchain tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build mold pipx python3 binutils
+          pipx install conan==2.33.0
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Restore prior Conan binary cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.conan2
+          key: conan2.33-minqt-v2-${{ matrix.runner }}-${{ runner.arch }}-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}
+      - name: Ensure exact locked binary dependencies are installed
+        run: |
+          if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+            python3 tools/yt.py deps server --build-policy never
+          else
+            python3 tools/yt.py deps server --build-policy missing
+            python3 tools/yt.py prune-conan
+          fi
+      - name: Cache completed dependencies before compiling Yharnam
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.conan2
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - name: Configure, build, test and stage
+        run: |
+          python3 tools/yt.py configure server --reuse-deps --linker mold --compile-jobs 4 --link-jobs 1
+          python3 tools/yt.py build server --jobs 4
+          python3 tools/yt.py test server --jobs 4
+          python3 tools/package_server.py
+          python3 tools/smoke_server.py --stage out/yt/server/release/stage
+          python3 tools/smoke_container.py --stage out/yt/server/release/stage
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish package-cache data layer (no secrets or game data)
+        env:
+          CACHE_TAG: ghcr.io/clanker-boi/yharnam-conan-cache:lock-${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}-${{ matrix.arch }}
+        run: |
+          mkdir -p out/oci-deps/conan-cache
+          cp -a "$HOME/.conan2/." out/oci-deps/conan-cache/
+          docker build --platform "linux/${{ matrix.arch }}" -f docker/deps/Dockerfile -t "$CACHE_TAG" out/oci-deps
+          docker push "$CACHE_TAG"
+      - name: Publish tested headless-server image for commit and architecture
+        env:
+          SERVER_TAG: ghcr.io/clanker-boi/yharnam-server:git-${{ github.sha }}-${{ matrix.arch }}
+        run: |
+          docker tag yt-shadnet-smoke:ci "$SERVER_TAG"
+          docker push "$SERVER_TAG"
+  multiarch:
+    needs: native
+    runs-on: ubuntu-24.04
+    if: github.repository == 'clanker-boi/bloodborne-server'
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Combine tested architecture images into immutable commit manifest
+        env:
+          BASE: ghcr.io/clanker-boi/yharnam-server
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          docker buildx imagetools create \
+            -t "$BASE:git-$COMMIT_SHA" \
+            "$BASE:git-$COMMIT_SHA-amd64" "$BASE:git-$COMMIT_SHA-arm64"
+          docker buildx imagetools inspect "$BASE:git-$COMMIT_SHA"
+      - name: Combine per-arch Conan package snapshots
+        env:
+          CACHE_BASE: ghcr.io/clanker-boi/yharnam-conan-cache
+          LOCK_HASH: ${{ hashFiles('conanfile.py', 'conan/profiles/**', 'conan/locks/**') }}
+        run: |
+          docker buildx imagetools create \
+            -t "$CACHE_BASE:lock-$LOCK_HASH" \
+            "$CACHE_BASE:lock-$LOCK_HASH-amd64" "$CACHE_BASE:lock-$LOCK_HASH-arm64"
+          docker buildx imagetools inspect "$CACHE_BASE:lock-$LOCK_HASH"
