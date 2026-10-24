@@ -18,6 +18,7 @@ class YharnamTogetherConan(ConanFile):
         "qt/*:shared": True,
         "qt/*:gui": False,
         "qt/*:widgets": False,
+        "qt/*:widgets": False,
         "qt/*:qthttpserver": True,
     }
 
